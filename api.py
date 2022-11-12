@@ -1,63 +1,77 @@
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict
 
-import requests
+from dataclass_type_validator import dataclass_validate
 from dotenv import load_dotenv
 from requests import Session, Response
 
-from const import API_XUR, BASE_URI_BUNGO, ID_XUR, ITEM_URI
+from const import (
+    API_XUR,
+    BASE_URI_BUNGO,
+    ID_XUR,
+    ITEM_URI,
+    NOMES_DOS_LUGARES,
+    LUGARES_QUE_XUR_PODE_APARECER,
+    CIFRA_E_ENGRAMA,
+)
+from entidades.informacao_xur import InformacaoXur
+from entidades.item import Item
+from entidades.lista_de_ids import ListaDeIds
 
 env_path = Path(".") / ".env"
 load_dotenv(dotenv_path=env_path)
 bungoKey = os.getenv("API_BUNGIE_KEY")
 
-requisicao: Session = requests.Session()
-requisicao.headers.update({"x-api-key": bungoKey})
 
+def buscar_informacoes_do_xur(sessao: Session) -> InformacaoXur | None:
+    resposta: Response = sessao.get(API_XUR)
+    data: Dict = resposta.json()
 
-def buscar_informacoes_do_xur() -> Dict | None:
-    """Busca informações do Xur."""
-    resposta: Response = requisicao.get(API_XUR)
-    data: None | Dict = resposta.json()
     if data:
-        localizacao: Dict = {
-            "planeta": data["placeName"],
-            "local": data["locationName"],
-        }
-        return localizacao
-    return None
+        return InformacaoXur(
+            localizacao={
+                "localizacao": LUGARES_QUE_XUR_PODE_APARECER[data["location"]],
+                "nome_do_local": NOMES_DOS_LUGARES[data["bubbleName"]],
+            }
+        )
+
+    return InformacaoXur()
 
 
-def buscar_informacoes_do_inventario_de_xur() -> Dict | None:
-    """Busca os códigos dos os itens vendidos pelo Xur."""
+def buscar_informacoes_do_inventario_de_xur(sessao: Session) -> ListaDeIds:
     url: str = f"{BASE_URI_BUNGO}{ID_XUR}"
-    resposta: Response = requisicao.get(url)
-    return resposta.json()
+    resposta: Response = sessao.get(url)
+    todos_os_itens = resposta.json()
+    todos_os_ids = ListaDeIds()
+
+    if not todos_os_itens:
+        return todos_os_ids
+
+    itens_vendidos = todos_os_itens["Response"]["sales"]["data"]["2190858386"][
+        "saleItems"
+    ]
+
+    for item in itens_vendidos.values():
+        id_item = item["itemHash"]
+        if id_item in CIFRA_E_ENGRAMA:
+            continue
+        todos_os_ids.adicionar_id(id_item)
+
+    return todos_os_ids
 
 
-def buscar_informacoes_dos_itens(codigos_dos_itens) -> List:
-    """Busca informações dos itens."""
+def buscar_informacoes_dos_itens(id_dos_itens: List, sessao: Session) -> List:
     url_base: str = f"{BASE_URI_BUNGO}{ITEM_URI}"
     informacoes_dos_itens: List = []
-    for codigo in codigos_dos_itens:
-        url: str = f"{url_base}{str(codigo)}"
-        resposta: Response = requisicao.get(url)
-        informacoes_dos_itens.append(resposta.json())
+    item = Item()
+
+    for id_item in id_dos_itens:
+        url: str = f"{url_base}{id_item}"
+        resposta: Response = sessao.get(url)
+        informacoes_dos_itens.append(
+            item.transformar_em_dataclass(item=resposta.json())
+        )
+
     return informacoes_dos_itens
-
-
-def parsear_informacoes_dos_itens(informacoes_dos_itens) -> List[Dict]:
-    """Parseia as informações dos itens."""
-    itens: List = []
-    for item in informacoes_dos_itens:
-        info_itens: Dict = {
-            "name": item["Response"]["displayProperties"]["name"],
-            "flavor": item["Response"]["flavorText"],
-            "icon": item["Response"]["displayProperties"]["icon"],
-            "typeAndTier": item["Response"]["itemTypeAndTierDisplayName"],
-            "screenshot": item["Response"]["screenshot"],
-            "type": "weapon" if item["Response"]["itemType"] == 3 else "armor",
-        }
-        itens.append(info_itens)
-    return itens

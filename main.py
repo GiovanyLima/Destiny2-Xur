@@ -1,16 +1,25 @@
-# This is a sample Python script.
+from typing import List
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import requests
 
+from api import (
+    buscar_informacoes_do_xur,
+    buscar_informacoes_do_inventario_de_xur,
+    buscar_informacoes_dos_itens,
+    bungoKey,
+)
+from entidades.informacao_xur import InformacaoXur
+from entidades.item import Item
+from entidades.lista_de_ids import ListaDeIds
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f"Hi, {name}")  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == "__main__":
-    print_hi("PyCharm")
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    with requests.Session() as sessao:
+        sessao.headers.update({"x-api-key": bungoKey})
+        xur: InformacaoXur = buscar_informacoes_do_xur(sessao=sessao)
+        id_dos_itens: ListaDeIds = buscar_informacoes_do_inventario_de_xur(
+            sessao=sessao
+        )
+        itens: List[Item] = buscar_informacoes_dos_itens(
+            id_dos_itens=id_dos_itens.ids, sessao=sessao
+        )
+        xur.adicionar_itens(itens=itens)

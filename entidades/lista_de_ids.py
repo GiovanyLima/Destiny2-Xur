@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import List
 
 from dataclass_type_validator import dataclass_validate
 
@@ -6,8 +7,7 @@ from dataclass_type_validator import dataclass_validate
 @dataclass_validate
 @dataclass
 class ListaDeIds:
-
-    ids: list[str] = field(default_factory=list)
+    ids: List[str] = field(default_factory=list)
 
     def __repr__(self) -> str:
         return f"{self.ids}"
@@ -16,6 +16,3 @@ class ListaDeIds:
         if not isinstance(item_id, str):
             item_id = str(item_id)
         self.ids.append(item_id)
-
-    def remover_id(self, item_id) -> None:
-        self.ids.remove(item_id)

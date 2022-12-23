@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 
 from dataclass_type_validator import dataclass_validate
 
@@ -9,7 +9,7 @@ from entidades.item import Item
 @dataclass_validate
 @dataclass
 class InformacaoXur:
-    localizacao: dict = field(
+    localizacao: Dict = field(
         default_factory=lambda: {
             "localizacao": "Sem localização",
             "nome_do_local": "Sem nome do local",

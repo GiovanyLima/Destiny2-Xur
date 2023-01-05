@@ -14,5 +14,6 @@ def setup_logging():
     logger.add(
         "logs.log",
         format=fmt,
+        rotation="5 MB",
     )
     logger.success("Logging configurado com sucesso!")
